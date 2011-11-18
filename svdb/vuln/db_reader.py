@@ -10,8 +10,8 @@ import logging
 import sqlite3
 import os.path
 
-from svdb.id.cpe import CPEID
-from svdb.id.cve import CVEID
+from id.cpe import CPEID
+from id.cve import CVEID
 
 
 logger = logging.getLogger("svdb.vuln.db_reader")

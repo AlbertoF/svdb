@@ -268,7 +268,7 @@ class CVSSBaseMetrics(object):
 
     def __str__(self):
         res = """
-        score = %s, 
+        score = %s,         
         security_protection = %s,     
         access_vector = %s, 
         access_complexity = %s, 

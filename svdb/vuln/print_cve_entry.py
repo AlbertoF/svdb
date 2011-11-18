@@ -14,7 +14,7 @@ from lxml import etree
 tag_dict = {}
     
     
-def create_tag_dict(root):
+def create_dict_nsmap(root):
     tag_dict['entry'] = r"{%s}entry" % root.nsmap[None]
     tag_dict['vuln:vulnerable-configuration'] = \
         r'{%s}vulnerable-configuration' % root.nsmap['vuln']
@@ -29,11 +29,11 @@ def print_cve_entry(cve_id):
     if year < 2002:
         year = 2002
 
-    file = open(os.path.join(os.environ['KAFTI_NVD_BASES_PATH'], 
+    file_nvdcve = open(os.path.join(os.environ['KAFTI_NVD_BASES_PATH'], 
                              "nvdcve-2.0-%s.xml" % year))
-    root = etree.parse(file).getroot()
+    root = etree.parse(file_nvdcve).getroot()
     
-    create_tag_dict(root)
+    create_dict_nsmap(root)
     
     for entry_tag in root.iter(tag_dict['entry']):
         if entry_tag.get("id") == cve_id:

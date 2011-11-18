@@ -1,6 +1,6 @@
 import unittest
 
-from svdb.id.cwe import CWEID
+from id.cwe import CWEID
 
 
 class CWETestCase(unittest.TestCase):

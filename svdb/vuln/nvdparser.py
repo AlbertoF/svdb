@@ -14,91 +14,96 @@ import time
 from lxml import etree
 
 import check_nvd_correctness
-import svdb.vuln.vulnerability as vuln
-from svdb.id.cve import CVEID
-from svdb.id.cpe import CPEID
-from svdb.id.cwe import CWEID
-from svdb.id.cvss import *
+import vuln.vulnerability as vuln
+from id.cve import CVEID
+from id.cpe import CPEID
+from id.cwe import CWEID
+from id.cvss import *
 
 
 logger = logging.getLogger("svdb.vuln.test_nvd")
 logger.setLevel(logging.INFO)
 
 
-tag_dict = {}
+dict_nsmap = {}
 
 
 def is_or_elem(elem):
-    return elem.tag == tag_dict['cpe-lang:logical-test'] and elem.get('operator') == 'OR'
+    return elem.tag == dict_nsmap['cpe-lang:logical-test'] and elem.get('operator') == 'OR'
 
 
 def is_and_elem(elem):
-    return elem.tag == tag_dict['cpe-lang:logical-test'] and elem.get('operator') == 'AND'
+    return elem.tag == dict_nsmap['cpe-lang:logical-test'] and elem.get('operator') == 'AND'
 
 
 def is_fact_ref(elem):
-    return elem.tag == tag_dict['cpe-lang:fact-ref']
+    return elem.tag == dict_nsmap['cpe-lang:fact-ref']
     
 
-def create_tag_dict(root):
+def create_dict_nsmap(root):
     
-    tag_dict['entry'] = "{%s}entry" % root.nsmap[None]
+    dict_nsmap['entry'] = "{%s}entry" % root.nsmap[None]
     
-    tag_dict['vuln:vulnerable-configuration'] = '{%s}vulnerable-configuration' % root.nsmap['vuln']
-    tag_dict['vuln:vulnerable-software-list'] = '{%s}vulnerable-software-list' % root.nsmap['vuln']
-    tag_dict['vuln:cve-id'] = '{%s}cve-id' % root.nsmap['vuln']
-    tag_dict['vuln:published-datetime'] = '{%s}published-datetime' % root.nsmap['vuln']
-    tag_dict['vuln:last-modified-datetime'] = '{%s}last-modified-datetime' % root.nsmap['vuln']
-    tag_dict['vuln:cvss'] = '{%s}cvss' % root.nsmap['vuln']
-    tag_dict['vuln:cwe'] = '{%s}cwe' % root.nsmap['vuln']
-    tag_dict['vuln:references'] = '{%s}references' % root.nsmap['vuln']
-    tag_dict['vuln:summary'] = '{%s}summary' % root.nsmap['vuln']
+    dict_nsmap['vuln:vulnerable-configuration'] = '{%s}vulnerable-configuration' % root.nsmap['vuln']
+    dict_nsmap['vuln:vulnerable-software-list'] = '{%s}vulnerable-software-list' % root.nsmap['vuln']
+    dict_nsmap['vuln:cve-id'] = '{%s}cve-id' % root.nsmap['vuln']
+    dict_nsmap['vuln:published-datetime'] = '{%s}published-datetime' % root.nsmap['vuln']
+    dict_nsmap['vuln:last-modified-datetime'] = '{%s}last-modified-datetime' % root.nsmap['vuln']
+    dict_nsmap['vuln:cvss'] = '{%s}cvss' % root.nsmap['vuln']
+    dict_nsmap['vuln:cwe'] = '{%s}cwe' % root.nsmap['vuln']
+    dict_nsmap['vuln:references'] = '{%s}references' % root.nsmap['vuln']
+    dict_nsmap['vuln:summary'] = '{%s}summary' % root.nsmap['vuln']
     
-    tag_dict['cpe-lang:logical-test'] = '{%s}logical-test' % root.nsmap['cpe-lang']
-    tag_dict['cpe-lang:fact-ref'] = '{%s}fact-ref' % root.nsmap['cpe-lang']
+    dict_nsmap['cpe-lang:logical-test'] = '{%s}logical-test' % root.nsmap['cpe-lang']
+    dict_nsmap['cpe-lang:fact-ref'] = '{%s}fact-ref' % root.nsmap['cpe-lang']
     
-    tag_dict['cvss:base_metrics'] = '{%s}base_metrics' % root.nsmap['cvss']
-    tag_dict['cvss:score'] = '{%s}score' % root.nsmap['cvss']
-    tag_dict['cvss:access-vector'] = '{%s}access-vector' % root.nsmap['cvss']
-    tag_dict['cvss:access-complexity'] = '{%s}access-complexity' % root.nsmap['cvss']
-    tag_dict['cvss:authentication'] = '{%s}authentication' % root.nsmap['cvss']
-    tag_dict['cvss:confidentiality-impact'] = '{%s}confidentiality-impact' % root.nsmap['cvss']
-    tag_dict['cvss:integrity-impact'] = '{%s}integrity-impact' % root.nsmap['cvss']
-    tag_dict['cvss:availability-impact'] = '{%s}availability-impact' % root.nsmap['cvss']
-    tag_dict['cvss:source'] = '{%s}source' % root.nsmap['cvss']
-    tag_dict['cvss:generated-on-datetime'] = '{%s}generated-on-datetime' % root.nsmap['cvss']
-
+    dict_nsmap['cvss:base_metrics'] = '{%s}base_metrics' % root.nsmap['cvss']
+    dict_nsmap['cvss:score'] = '{%s}score' % root.nsmap['cvss']
+    dict_nsmap['cvss:access-vector'] = '{%s}access-vector' % root.nsmap['cvss']
+    dict_nsmap['cvss:access-complexity'] = '{%s}access-complexity' % root.nsmap['cvss']
+    dict_nsmap['cvss:authentication'] = '{%s}authentication' % root.nsmap['cvss']
+    dict_nsmap['cvss:confidentiality-impact'] = '{%s}confidentiality-impact' % root.nsmap['cvss']
+    dict_nsmap['cvss:integrity-impact'] = '{%s}integrity-impact' % root.nsmap['cvss']
+    dict_nsmap['cvss:availability-impact'] = '{%s}availability-impact' % root.nsmap['cvss']
+    dict_nsmap['cvss:source'] = '{%s}source' % root.nsmap['cvss']
+    dict_nsmap['cvss:generated-on-datetime'] = '{%s}generated-on-datetime' % root.nsmap['cvss']
+    return dict_nsmap
 
 def parseEntry(entry):
-    
+    """
+    Parsing entry
+    @return: vulnObject with full data of entry
+    """
     vulnObject = vuln.Vulnerability()
     
     cve_id = entry.get('id')
-    vulnObject.cve = CVEID(cve_id)
+    vulnObject.cve = CVEID.from_string(cve_id)
         
     for elem in entry:
-        if elem.tag == tag_dict['vuln:vulnerable-configuration']:
+        if elem.tag == dict_nsmap['vuln:vulnerable-configuration']:
             vulnObject.condition.conidtion_variants.append(parseVulnConfig(elem))
-        elif elem.tag == tag_dict['vuln:vulnerable-software-list']:
+        elif elem.tag == dict_nsmap['vuln:vulnerable-software-list']:
             vulnObject.products = parseVulnSoftwareList(elem)
-        elif elem.tag == tag_dict['vuln:cve-id']:
+        elif elem.tag == dict_nsmap['vuln:cve-id']:
             pass
-        elif elem.tag == tag_dict['vuln:published-datetime']:
+        elif elem.tag == dict_nsmap['vuln:discovered-datetime']:
+            vulnObject.discovered_datetime = parseDiscoveredDateTime(elem)
+        elif elem.tag == dict_nsmap['vuln:published-datetime']:
             vulnObject.published_datetime = parsePublishedDateTime(elem)
-        elif elem.tag == tag_dict['vuln:last-modified-datetime']:
+        elif elem.tag == dict_nsmap['vuln:last-modified-datetime']:
             vulnObject.last_modified_datetime = parseLastModifDateTime(elem)
-        elif elem.tag == tag_dict['vuln:cvss']:
+        elif elem.tag == dict_nsmap['vuln:cvss']:
             vulnObject.cvss_base_metrics = parseCVSS(elem)
-        elif elem.tag == tag_dict['vuln:cwe']:
+        elif elem.tag == dict_nsmap['vuln:cwe']:
             vulnObject.cwe = CWEID(elem.get('id'))
-        elif elem.tag == tag_dict['vuln:references']:
+        elif elem.tag == dict_nsmap['vuln:references']:
             vulnObject.references.append(parseVulnerabilityReference(elem))
-        elif elem.tag == tag_dict['vuln:summary']:
+        elif elem.tag == dict_nsmap['vuln:summary']:
             vulnObject.summary = elem.text
         
         #parse first 'cpe-lang:logical-test' (should be OR)
-        if entry.find(tag_dict['vuln:vulnerable-software-list']) is None:
-            vuln_conf_elem = entry.find(tag_dict['vuln:vulnerable-configuration'])
+        if entry.find(dict_nsmap['vuln:vulnerable-software-list']) is None:
+            vuln_conf_elem = entry.find(dict_nsmap['vuln:vulnerable-configuration'])
             vulnObject.products = parseVulnConfigSoftwareList(vuln_conf_elem)
     
     
@@ -113,7 +118,9 @@ def parseEntry(entry):
 
 
 def parseVulnConfig(elem):
-    
+    """
+    Parse vulnerable-configuration
+    """
     conditionGroup = vuln.VulnConditionGroup()
     
     for elem_le in elem:
@@ -162,6 +169,8 @@ def _parseISO8601Time(str):
     #TODO: make time parsing better
     return datetime.datetime(*time.strptime(str[0:-11], "%Y-%m-%dT%H:%M:%S")[:6])
 
+def parseDiscoveredDateTime(elem):
+    return _parseISO8601Time(elem.text)
 
 def parsePublishedDateTime(elem):
     return _parseISO8601Time(elem.text)
@@ -172,28 +181,33 @@ def parseLastModifDateTime(elem):
 
 
 def parseCVSS(elem):
+    """
+    It is method, which parse cvss:base_metrics
+    Input: Elem <vuln:cvss>
+    Output: CVSSBaseMetrics
+    """
     bm = CVSSBaseMetrics()
     
     for cvss_elem in elem:
-        if cvss_elem.tag == tag_dict['cvss:base_metrics']:
+        if cvss_elem.tag == dict_nsmap['cvss:base_metrics']:
             for bm_elem in cvss_elem:        
-                if bm_elem.tag == tag_dict['cvss:score']:
+                if bm_elem.tag == dict_nsmap['cvss:score']:
                     bm.score = float(bm_elem.text)
-                elif bm_elem.tag == tag_dict['cvss:access-vector']:
+                elif bm_elem.tag == dict_nsmap['cvss:access-vector']:
                     bm.access_vector = ACCESS_VECTOR_VALUES.from_string(bm_elem.text)
-                elif bm_elem.tag == tag_dict['cvss:access-complexity']:
+                elif bm_elem.tag == dict_nsmap['cvss:access-complexity']:
                     bm.access_complexity = ACCESS_COMPLEXITY_VALUES.from_string(bm_elem.text)
-                elif bm_elem.tag == tag_dict['cvss:authentication']:
+                elif bm_elem.tag == dict_nsmap['cvss:authentication']:
                     bm.authentication = AUTHENTICATION_VALUES.from_string(bm_elem.text)
-                elif bm_elem.tag == tag_dict['cvss:confidentiality-impact']:
+                elif bm_elem.tag == dict_nsmap['cvss:confidentiality-impact']:
                     bm.confidentiality_impact = IMPACT_VALUES.from_string(bm_elem.text)
-                elif bm_elem.tag == tag_dict['cvss:integrity-impact']:
+                elif bm_elem.tag == dict_nsmap['cvss:integrity-impact']:
                     bm.integrity_impact = IMPACT_VALUES.from_string(bm_elem.text)
-                elif bm_elem.tag == tag_dict['cvss:availability-impact']:
+                elif bm_elem.tag == dict_nsmap['cvss:availability-impact']:
                     bm.availability_impact = IMPACT_VALUES.from_string(bm_elem.text)
-                elif bm_elem.tag == tag_dict['cvss:source']:
+                elif bm_elem.tag == dict_nsmap['cvss:source']:
                     pass
-                elif bm_elem.tag == tag_dict['cvss:generated-on-datetime']:
+                elif bm_elem.tag == dict_nsmap['cvss:generated-on-datetime']:
                     #bm.generated_datetime = _parseISO8601Time(bm_elem.text)
                     pass
         
@@ -206,15 +220,18 @@ def parseVulnerabilityReference(elem):
 
 
 def parse_nvd_file(fullname, bad_cve_id_list = None):
-    
+    """
+    @keyword fullname: Name of file. Must be *.xml
+    Generator, which yield parsed entry
+    """
     if os.path.isfile(fullname) and fullname.endswith('.xml'):
         logger.info(fullname)
         file = open(fullname)
         root = etree.parse(file).getroot()
         
-        create_tag_dict(root)
+        create_dict_nsmap(root)
         
-        for entry in root.iter(tag_dict['entry']):
+        for entry in root.iter(dict_nsmap['entry']):
             if bad_cve_id_list != None:
                 if entry.get('id') in bad_cve_id_list:
                     continue
